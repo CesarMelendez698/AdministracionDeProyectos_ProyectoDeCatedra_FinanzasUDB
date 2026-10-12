@@ -126,7 +126,7 @@ export default function ProfileScreen({ navigation }) {
   const handleLogout = () => {
     Alert.alert(
       'Cerrar Sesión',
-      '¿Estás seguro de que deseas cerrar tu sesión en FinanzasApp?',
+      '¿Estás seguro de que deseas cerrar tu sesión en Finanzas UDB?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Cerrar Sesión', style: 'destructive', onPress: logout },
@@ -384,7 +384,7 @@ export default function ProfileScreen({ navigation }) {
       {/* ── 6. PIE DE PÁGINA INFORMATIVO ── */}
       <View style={styles.footerContainer}>
         <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-          FinanzasApp Institucional UDB
+          Finanzas UDB Institucional
         </Text>
         <Text style={[styles.footerVersion, { color: theme.textSecondary }]}>
           Versión 1.0.0 • Universidad Don Bosco

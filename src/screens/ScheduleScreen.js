@@ -332,7 +332,7 @@ export default function ScheduleScreen() {
       }
     });
 
-    text += `━━━━━━━━━━━━━━━━━━━━━━\nGenerado con FinanzasApp UDB 📱`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\nGenerado con Finanzas UDB 📱`;
 
     try {
       await Share.share({
