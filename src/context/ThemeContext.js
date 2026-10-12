@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -36,44 +36,55 @@ export const darkTheme = {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const systemScheme = useColorScheme(); // Captura el tema por defecto del sistema operativo
+  const systemScheme = useColorScheme();
   const [isDarkMode, setIsDarkMode] = useState(systemScheme === 'dark');
   const [themeLoading, setThemeLoading] = useState(true);
 
   // Carga la preferencia guardada al relanzar la app
   useEffect(() => {
+    let isMounted = true;
     const loadPersistedTheme = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('@user_theme_preference');
-        if (savedTheme !== null) {
-          setIsDarkMode(savedTheme === 'dark');
-        } else {
-          setIsDarkMode(systemScheme === 'dark');
+        if (isMounted) {
+          if (savedTheme !== null) {
+            setIsDarkMode(savedTheme === 'dark');
+          } else {
+            setIsDarkMode(systemScheme === 'dark');
+          }
         }
       } catch (error) {
         console.error('Error cargando el tema persistente:', error);
       } finally {
-        setThemeLoading(false);
+        if (isMounted) setThemeLoading(false);
       }
     };
     loadPersistedTheme();
+    return () => { isMounted = false; };
   }, [systemScheme]);
 
-  // Función para alternar el tema y persistirlo localmente
-  const toggleTheme = async () => {
-    try {
-      const newMode = !isDarkMode;
-      setIsDarkMode(newMode);
-      await AsyncStorage.setItem('@user_theme_preference', newMode ? 'dark' : 'light');
-    } catch (error) {
-      console.error('Error guardando la preferencia de tema:', error);
-    }
-  };
+  // Alternar el tema al instante (0ms lag en UI) y persistir en segundo plano
+  const toggleTheme = useCallback(() => {
+    setIsDarkMode(prev => {
+      const next = !prev;
+      AsyncStorage.setItem('@user_theme_preference', next ? 'dark' : 'light').catch(err => {
+        console.error('Error guardando la preferencia de tema:', err);
+      });
+      return next;
+    });
+  }, []);
 
-  const theme = isDarkMode ? darkTheme : lightTheme;
+  const theme = useMemo(() => (isDarkMode ? darkTheme : lightTheme), [isDarkMode]);
+
+  const contextValue = useMemo(() => ({
+    isDarkMode,
+    theme,
+    toggleTheme,
+    themeLoading
+  }), [isDarkMode, theme, toggleTheme, themeLoading]);
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, theme, toggleTheme, themeLoading }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

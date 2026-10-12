@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useMemo } from 'react';
 import { auth } from '../config/firebase';
 import { 
   createUserWithEmailAndPassword, 
@@ -197,8 +197,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const contextValue = useMemo(() => ({
+    user, 
+    loading, 
+    login, 
+    register, 
+    logout, 
+    resetPassword, 
+    normalize 
+  }), [user, loading]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, resetPassword, normalize }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -63,7 +63,9 @@ export default function ProfileScreen({ navigation }) {
   const userScheduleKey = user?.email ? `${STORAGE_SCHEDULE}_${user.email}` : STORAGE_SCHEDULE;
   const userCycleKey = user?.email ? `@user_udb_cycle_${user.email}` : '@user_udb_cycle';
 
-  const { balance = 0 } = getMonthSummary ? getMonthSummary(transactions) : {};
+  const { balance = 0 } = useMemo(() => {
+    return getMonthSummary ? getMonthSummary(transactions) : { balance: 0 };
+  }, [getMonthSummary, transactions]);
 
   // Cargar carrera, ciclo y conteo de materias desde almacenamiento local aislado
   useEffect(() => {

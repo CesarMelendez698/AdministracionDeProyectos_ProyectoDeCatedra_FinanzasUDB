@@ -311,14 +311,10 @@ export default function BudgetsScreen() {
       return;
     }
 
-    try {
-      await addBudget(cleanCategory, cleanLimit);
-      setCategory('');
-      setLimit('');
-      Alert.alert('Éxito', 'Límite establecido de forma correcta.');
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo guardar el presupuesto.');
-    }
+    // ⚡ RESPUESTA INSTANTÁNEA: Limpieza inmediata del formulario y actualización optimista
+    setCategory('');
+    setLimit('');
+    addBudget(cleanCategory, cleanLimit);
   };
 
   const handleDelete = (id, categoryName) => {
@@ -330,13 +326,8 @@ export default function BudgetsScreen() {
         { 
           text: 'Eliminar', 
           style: 'destructive', 
-          onPress: async () => {
-            try {
-              await deleteBudget(id);
-              Alert.alert('Eliminado', 'El presupuesto fue removido.');
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo borrar el presupuesto.');
-            }
+          onPress: () => {
+            deleteBudget(id); // Desaparece inmediatamente de la UI
           } 
         }
       ]

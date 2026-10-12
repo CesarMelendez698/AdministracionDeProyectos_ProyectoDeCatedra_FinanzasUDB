@@ -1,4 +1,4 @@
-import React, { useContext, useLayoutEffect, useState, useEffect } from 'react';
+import React, { useContext, useLayoutEffect, useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -40,6 +40,20 @@ function timeStringToMinutes(timeStr) {
   if (ampm === 'PM' && hours < 12) hours += 12;
   if (ampm === 'AM' && hours === 12) hours = 0;
   return hours * 60 + minutes;
+}
+
+function formatClassCountdown(totalMinutes) {
+  if (!totalMinutes || totalMinutes <= 0) return 'EN BREVE';
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+
+  if (hours >= 1) {
+    if (mins === 0) {
+      return `EN ${hours} ${hours === 1 ? 'HORA' : 'HORAS'}`;
+    }
+    return `EN ${hours} ${hours === 1 ? 'HORA' : 'HORAS'} Y ${mins} MIN`;
+  }
+  return `EN ${mins} ${mins === 1 ? 'MINUTO' : 'MINUTOS'}`;
 }
 
 export default function DashboardScreen({ navigation }) {
@@ -138,23 +152,34 @@ export default function DashboardScreen({ navigation }) {
     return () => clearInterval(interval);
   }, [user]);
 
-  const { income = 0, expense = 0, balance = 0 } = getMonthSummary ? getMonthSummary(transactions) : {};
-  const accountBalances = getAccountBalances ? getAccountBalances() : [];
+  const monthSummary = useMemo(() => {
+    return getMonthSummary ? getMonthSummary(transactions) : { income: 0, expense: 0, balance: 0 };
+  }, [getMonthSummary, transactions]);
 
-  const categoryTotals = {};
-  (transactions || []).filter(t => t && t.type === 'expense').forEach(t => {
-    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount || 0);
-  });
+  const { income = 0, expense = 0, balance = 0 } = monthSummary;
+
+  const accountBalances = useMemo(() => {
+    return getAccountBalances ? getAccountBalances() : [];
+  }, [getAccountBalances]);
 
   // Paleta moderna adaptada al brillo del tema activo
-  const colorPalette = ['#6366F1', '#10B981', '#F59E0B', '#06B6D4', '#EC4899'];
-  const chartData = Object.keys(categoryTotals).map((cat, idx) => ({
-    name: cat,
-    population: categoryTotals[cat],
-    color: colorPalette[idx % colorPalette.length],
-    legendFontColor: theme.textSecondary, // Respetando modo oscuro en gráfico
-    legendFontSize: normalize(11) 
-  }));
+  const chartData = useMemo(() => {
+    const categoryTotals = {};
+    for (let i = 0; i < (transactions || []).length; i++) {
+      const t = transactions[i];
+      if (t && t.type === 'expense' && t.category) {
+        categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount || 0);
+      }
+    }
+    const colorPalette = ['#6366F1', '#10B981', '#F59E0B', '#06B6D4', '#EC4899'];
+    return Object.keys(categoryTotals).map((cat, idx) => ({
+      name: cat,
+      population: categoryTotals[cat],
+      color: colorPalette[idx % colorPalette.length],
+      legendFontColor: theme.textSecondary,
+      legendFontSize: normalize(11) 
+    }));
+  }, [transactions, theme.textSecondary]);
 
   const getShortName = (fullName) => {
     if (!fullName) return 'Estudiante UDB';
@@ -329,7 +354,7 @@ export default function DashboardScreen({ navigation }) {
                 {nextClassInfo.status === 'ongoing'
                   ? 'EN CURSO AHORA'
                   : nextClassInfo.status === 'upcoming'
-                  ? `EN ${nextClassInfo.timeDiff} MINUTOS`
+                  ? formatClassCountdown(nextClassInfo.timeDiff)
                   : 'CLASES FINALIZADAS'}
               </Text>
             </View>
