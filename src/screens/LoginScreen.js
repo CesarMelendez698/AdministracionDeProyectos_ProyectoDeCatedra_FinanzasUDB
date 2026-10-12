@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 // IMPORTACIÓN DE MODAL: Añadimos Modal para la ventana emergente de recuperación
 import { 
   View, 
@@ -13,6 +13,7 @@ import {
   PixelRatio,
   Platform
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
 // IMPORTE DE EXPO VECTOR ICONS
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -29,9 +30,12 @@ function normalize(size) {
   return Math.round(PixelRatio.roundToNearestPixel(newSize));
 }
 
+const STORAGE_REMEMBERED_EMAIL = '@user_remembered_email';
+
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(false);
   
   // ESTADOS PARA EL MODAL
   const [modalVisible, setModalVisible] = useState(false); 
@@ -44,12 +48,51 @@ export default function LoginScreen({ navigation }) {
   // Consumo de propiedades de autenticación del Contexto
   const { login, loading, resetPassword } = useContext(AuthContext);
 
+  // Cargar correo previamente recordado si existe
+  useEffect(() => {
+    const loadRememberedEmail = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_REMEMBERED_EMAIL);
+        if (saved) {
+          setEmail(saved);
+          setRememberEmail(true);
+        }
+      } catch (err) {
+        console.warn('Error al cargar correo recordado:', err);
+      }
+    };
+    loadRememberedEmail();
+  }, []);
+
+  const handleToggleRemember = async () => {
+    const nextVal = !rememberEmail;
+    setRememberEmail(nextVal);
+    if (!nextVal) {
+      try {
+        await AsyncStorage.removeItem(STORAGE_REMEMBERED_EMAIL);
+      } catch (err) {
+        console.warn('Error al eliminar correo recordado:', err);
+      }
+    }
+  };
+
   // Manejador del flujo de inicio de sesión
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim() || !password) {
       Alert.alert('Campos incompletos', 'Por favor, ingresa tu correo y contraseña.');
       return;
     }
+
+    try {
+      if (rememberEmail) {
+        await AsyncStorage.setItem(STORAGE_REMEMBERED_EMAIL, email.trim());
+      } else {
+        await AsyncStorage.removeItem(STORAGE_REMEMBERED_EMAIL);
+      }
+    } catch (err) {
+      console.warn('Error guardando preferencia de recordar usuario:', err);
+    }
+
     login(email, password);
   };
 
@@ -78,7 +121,7 @@ export default function LoginScreen({ navigation }) {
     <View style={styles.container}>
       {/* SECCIÓN VISUAL: Identidad e información */}
       <Text style={styles.logo}>Finanzas UDB</Text>
-      <Text style={styles.tagline}>Diseño y Programación de Software Multiplataforma</Text>
+      <Text style={styles.tagline}>Gestión inteligente de tus finanzas y presupuesto universitario</Text>
 
       {/* ENTRADA DE DATOS: Correo electrónico */}
       <TextInput 
@@ -114,14 +157,31 @@ export default function LoginScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* ENLACE SECUNDARIO: Disparador del Modal */}
-      <TouchableOpacity 
-        style={styles.forgotContainer} 
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.6}
-      >
-        <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-      </TouchableOpacity>
+      {/* FILA DE OPCIONES: Recordar usuario y Olvido de contraseña */}
+      <View style={styles.optionsRow}>
+        <TouchableOpacity 
+          style={styles.rememberContainer} 
+          onPress={handleToggleRemember}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name={rememberEmail ? 'checkbox' : 'square-outline'} 
+            size={normalize(19)} 
+            color={rememberEmail ? '#2196F3' : '#888'} 
+          />
+          <Text style={[styles.rememberText, rememberEmail && styles.rememberTextActive]}>
+            Recordar usuario
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.forgotContainer} 
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Control de carga para inicio de sesión */}
       {loading ? (
@@ -208,13 +268,14 @@ const styles = StyleSheet.create({
     color: '#2196F3' 
   },
   tagline: { 
-    fontSize: normalize(11), 
+    fontSize: normalize(13), 
     textAlign: 'center', 
-    color: '#888', 
-    marginBottom: normalize(32), 
-    marginTop: normalize(4),
-    textTransform: 'uppercase',
-    letterSpacing: 0.5
+    color: '#64748B', 
+    marginBottom: normalize(26), 
+    marginTop: normalize(6),
+    fontWeight: '500',
+    lineHeight: normalize(18),
+    paddingHorizontal: normalize(8)
   },
   input: { 
     backgroundColor: '#f5f5f5', 
@@ -250,14 +311,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: '100%'
   },
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: normalize(12),
+    marginBottom: normalize(22)
+  },
+  rememberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  rememberText: {
+    color: '#64748B',
+    fontSize: normalize(13),
+    marginLeft: normalize(6),
+    fontWeight: '500'
+  },
+  rememberTextActive: {
+    color: '#2196F3',
+    fontWeight: '600'
+  },
   forgotContainer: {
-    alignSelf: 'flex-end',
-    marginTop: normalize(4),
-    marginBottom: normalize(24)
+    alignSelf: 'center'
   },
   forgotText: {
-    color: '#666',
-    fontSize: normalize(14),
+    color: '#64748B',
+    fontSize: normalize(13),
     fontWeight: '500',
     textDecorationLine: 'underline'
   },

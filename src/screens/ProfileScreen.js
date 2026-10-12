@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as LocalAuthentication from 'expo-local-authentication';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { FinanceContext } from '../context/FinanceContext';
@@ -33,7 +32,6 @@ function normalize(size) {
 
 const STORAGE_CAREER = '@user_institutional_career';
 const STORAGE_SCHEDULE = '@user_institutional_schedule';
-const STORAGE_BIOMETRIC = '@user_biometric_enabled';
 
 const CAREERS_UDB = [
   'Ingeniería en Ciencias de la Computación',
@@ -56,8 +54,6 @@ export default function ProfileScreen({ navigation }) {
   const [careerModalVisible, setCareerModalVisible] = useState(false);
   const [customCareer, setCustomCareer] = useState('');
   const [scheduleCount, setScheduleCount] = useState(0);
-  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
-  const [biometricType, setBiometricType] = useState('Biometría');
 
   const [cycle, setCycle] = useState('Ciclo 01');
   const [cycleModalVisible, setCycleModalVisible] = useState(false);
@@ -99,24 +95,6 @@ export default function ProfileScreen({ navigation }) {
           setScheduleCount(0);
         }
 
-        // Detección de biometría en el dispositivo
-        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-        if (hasHardware && isEnrolled) {
-          const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-          if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-            setBiometricType('Face ID');
-          } else if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-            setBiometricType('Huella Dactilar');
-          }
-        }
-
-        const savedBio = await AsyncStorage.getItem(STORAGE_BIOMETRIC);
-        if (savedBio === 'true') {
-          setIsBiometricEnabled(true);
-        } else {
-          setIsBiometricEnabled(false);
-        }
       } catch (e) {
         console.warn('Error cargando datos de perfil:', e);
       }
@@ -124,40 +102,6 @@ export default function ProfileScreen({ navigation }) {
     loadAcademicData();
   }, [userCareerKey, userScheduleKey, userCycleKey]);
 
-  const handleToggleBiometrics = async (value) => {
-    if (value) {
-      try {
-        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-        if (!hasHardware || !isEnrolled) {
-          Alert.alert(
-            'Biometría no disponible',
-            'Tu dispositivo no cuenta con biometría configurada o no tiene huellas/rostro registrados.'
-          );
-          return;
-        }
-
-        const authResult = await LocalAuthentication.authenticateAsync({
-          promptMessage: `Confirma tu identidad para habilitar ${biometricType}`,
-          cancelLabel: 'Cancelar',
-          disableDeviceFallback: false,
-        });
-
-        if (authResult.success) {
-          setIsBiometricEnabled(true);
-          await AsyncStorage.setItem(STORAGE_BIOMETRIC, 'true');
-          Alert.alert('Seguridad Activada', `Acceso por ${biometricType} habilitado para esta cuenta.`);
-        } else {
-          setIsBiometricEnabled(false);
-        }
-      } catch (e) {
-        Alert.alert('Error', 'No se pudo verificar la autenticación biométrica.');
-      }
-    } else {
-      setIsBiometricEnabled(false);
-      await AsyncStorage.setItem(STORAGE_BIOMETRIC, 'false');
-    }
-  };
 
   const handleSelectCareer = async (selected) => {
     setCareer(selected);
@@ -399,26 +343,6 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       <View style={[styles.infoCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        {/* Desbloqueo Biométrico */}
-        <View style={styles.infoRow}>
-          <View style={[styles.infoIconCircle, { backgroundColor: '#F0FDF4' }]}>
-            <Ionicons name="finger-print-outline" size={normalize(18)} color="#16A34A" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Bloqueo de Seguridad</Text>
-            <Text style={[styles.infoValue, { color: theme.textPrimary }]}>
-              {biometricType} ({isBiometricEnabled ? 'Activado' : 'Desactivado'})
-            </Text>
-          </View>
-          <Switch
-            value={isBiometricEnabled}
-            onValueChange={handleToggleBiometrics}
-            trackColor={{ false: '#CBD5E1', true: '#16A34A' }}
-            thumbColor="#FFFFFF"
-          />
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
         <TouchableOpacity
           style={styles.infoRow}
