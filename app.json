@@ -26,13 +26,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "05c57bd1-b949-4a5a-926b-22b30a86b6f8"
-      }
-    },
     "plugins": [
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3dcacd4b-5db6-49bd-acd1-bf9c5e3d63d9"
+      }
+    },
+    "owner": "melendez"
   }
 }
